@@ -1,0 +1,28 @@
+name: crawlee-olx
+
+services:
+  postgres:
+    image: postgres:16
+    container_name: crawlee-postgres
+    environment:
+      POSTGRES_DB: crawlee
+      POSTGRES_USER: crawlee
+      POSTGRES_PASSWORD: crawlee
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+  bot:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: crawlee-bot
+    depends_on:
+      - postgres
+    env_file:
+      - path: .env
+        required: true
+
+volumes:
+  postgres_data:

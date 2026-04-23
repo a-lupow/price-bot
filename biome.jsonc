@@ -1,0 +1,65 @@
+{
+  // Keep the schema version up to date with the currently installed Biome version.
+  // This ensures that the configuration is compatible with the Biome version you are using.
+  "$schema": "https://biomejs.dev/schemas/2.4.12/schema.json",
+  // formatter, linter and assist - three Biome provided tools that are globally enabled.
+  // Settings that apply for all file types should be placed here.
+  "formatter": {
+    "enabled": true,
+    "lineWidth": 100,
+    "indentStyle": "space",
+    "includes": ["**", "!storage", "!node_modules"]
+  },
+  "linter": {
+    "enabled": true,
+    "rules": {
+      "recommended": true,
+      "nursery": {
+        "useSortedClasses": "warn"
+      }
+    },
+    "includes": ["**", "!storage", "!node_modules"]
+  },
+  "assist": {
+    "enabled": true,
+    "actions": {
+      "source": {
+        "organizeImports": "on"
+      }
+    },
+    "includes": ["**", "!storage", "!node_modules"]
+  },
+  //
+  // Global settings applied to all Biome tools (formatter, linter, assist).
+  //
+  "files": {
+    "ignoreUnknown": true
+  },
+  "vcs": {
+    "enabled": true,
+    "clientKind": "git",
+    "useIgnoreFile": true
+  },
+  //
+  // Language-specific settings.
+  //
+  // Biome refers to all variants of the JavaScript language as javascript.
+  // This includes TypeScript, JSX and TSX.
+  "javascript": {
+    "formatter": {
+      "quoteStyle": "double",
+      "semicolons": "asNeeded"
+    }
+  },
+  // We need to explicitly enable Tailwind CSS support in Biome.
+  "css": {
+    "parser": {
+      "tailwindDirectives": true
+    }
+  },
+  "html": {
+    "parser": {
+      "interpolation": true
+    }
+  }
+}
