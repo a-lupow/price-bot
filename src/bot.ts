@@ -3,7 +3,13 @@ import { asc, desc, eq } from "drizzle-orm"
 import { Bot } from "grammy"
 
 import { db } from "./db/index.js"
-import { pendingPairings, subscriptions, users } from "./db/schema.js"
+import {
+  type NewScrapedListing,
+  pendingPairings,
+  type ScrapedListing,
+  subscriptions,
+  users,
+} from "./db/schema.js"
 import { env } from "./env.js"
 import { logger } from "./log.js"
 import { messageBus } from "./message-bus.js"
@@ -13,6 +19,46 @@ const bot = new Bot(env.TELEGRAM_TOKEN)
 const botLogger = logger.child({ module: "bot" })
 
 const OLX_HOSTS = new Set(["www.olx.pl", "olx.pl"])
+const TELEGRAM_PARSE_MODE = "Markdown"
+
+const escapeMarkdown = (value: string) => value.replace(/([_*`[\]])/g, "\\$1")
+
+const formatPrice = (price: number | string, currency: string) =>
+  escapeMarkdown(`${price} ${currency}`)
+
+const formatAdMessage = (label: string, content: NewScrapedListing) => {
+  return [
+    `*${escapeMarkdown(label)}*`,
+    "",
+    `*Title:* ${escapeMarkdown(content.title)}`,
+    `*Price:* ${formatPrice(content.price, content.currency)}`,
+    `*URL:* ${content.url}`,
+  ].join("\n")
+}
+
+const formatSubscriptionMessage = (subscription: { id: string; options: unknown }) => {
+  const options =
+    typeof subscription.options === "object" && subscription.options !== null
+      ? Object.entries(subscription.options as Record<string, unknown>)
+          .map(([key, value]) => `• *${escapeMarkdown(key)}:* ${escapeMarkdown(String(value))}`)
+          .join("\n")
+      : escapeMarkdown(String(subscription.options))
+
+  return [`*Subscription #${escapeMarkdown(subscription.id)}*`, "", options].join("\n")
+}
+
+const formatListingMessage = (item: {
+  title: string
+  price: number | string
+  currency: string
+  url: string
+}) => {
+  return [
+    `*Title:* ${escapeMarkdown(item.title)}`,
+    `*Price:* ${formatPrice(item.price, item.currency)}`,
+    `*URL:* ${item.url}`,
+  ].join("\n")
+}
 
 const isOlxUrl = (value: string) => {
   try {
@@ -45,10 +91,9 @@ export function initialize() {
 
     await Promise.all(
       pairedUsers.map((user) =>
-        bot.api.sendMessage(
-          user.chatId,
-          `New ad: ${event.content.title} (${event.content.price} ${event.content.currency}) - ${event.content.url}`,
-        ),
+        bot.api.sendMessage(user.chatId, formatAdMessage("🚀 New ad", event.content), {
+          parse_mode: TELEGRAM_PARSE_MODE,
+        }),
       ),
     )
   })
@@ -64,10 +109,9 @@ export function initialize() {
 
     await Promise.all(
       pairedUsers.map((user) =>
-        bot.api.sendMessage(
-          user.chatId,
-          `Price drop: ${event.content.title} (${event.content.price} ${event.content.currency}) - ${event.content.url}`,
-        ),
+        bot.api.sendMessage(user.chatId, formatAdMessage("⏰️ Price drop", event.content), {
+          parse_mode: TELEGRAM_PARSE_MODE,
+        }),
       ),
     )
   })
@@ -115,7 +159,9 @@ export function initialize() {
     }
 
     for (const item of items) {
-      await ctx.reply(`${item.title} (${item.price} ${item.currency}) - ${item.url}`)
+      await ctx.reply(formatListingMessage(item), {
+        parse_mode: TELEGRAM_PARSE_MODE,
+      })
     }
   })
 
@@ -154,7 +200,17 @@ export function initialize() {
           }),
         )
 
-        await ctx.reply(`Global subscription created for OLX URL: ${input}`)
+        await ctx.reply(
+          [
+            "*✅ Global subscription created*",
+            "",
+            "*Source:* OLX URL",
+            `*Value:* ${escapeMarkdown(input)}`,
+          ].join("\n"),
+          {
+            parse_mode: TELEGRAM_PARSE_MODE,
+          },
+        )
         return
       }
 
@@ -164,7 +220,17 @@ export function initialize() {
         }),
       )
 
-      await ctx.reply(`Global subscription created for search query: ${input}`)
+      await ctx.reply(
+        [
+          "*✅ Global subscription created*",
+          "",
+          "*Source:* Search query",
+          `*Value:* ${escapeMarkdown(input)}`,
+        ].join("\n"),
+        {
+          parse_mode: TELEGRAM_PARSE_MODE,
+        },
+      )
     } catch (error) {
       botLogger.error({ error, input, chatId }, "Failed to create subscription")
       await ctx.reply("Could not create the subscription. Please verify the input and try again.")
@@ -190,7 +256,9 @@ export function initialize() {
     }
 
     for (const subscription of items) {
-      await ctx.reply(`Subscription: ${subscription.id} ${JSON.stringify(subscription.options)}`)
+      await ctx.reply(formatSubscriptionMessage(subscription), {
+        parse_mode: TELEGRAM_PARSE_MODE,
+      })
     }
   })
 
@@ -227,7 +295,16 @@ export function initialize() {
     })
 
     await ctx.reply(
-      "You are now paired and will receive notifications about new ads and price drops.",
+      [
+        "*✅ Pairing successful*",
+        "",
+        "You will now receive notifications about:",
+        "• *new ads*",
+        "• *price drops*",
+      ].join("\n"),
+      {
+        parse_mode: TELEGRAM_PARSE_MODE,
+      },
     )
   })
 

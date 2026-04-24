@@ -1,6 +1,6 @@
 {
-  "name": "crawlee-olx",
-  "version": "0.0.1",
+  "name": "price-bot",
+  "version": "0.0.2",
   "type": "module",
   "description": "This is an example of a Crawlee project.",
   "dependencies": {
