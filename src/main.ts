@@ -6,6 +6,7 @@ import "dotenv/config"
 
 import { initialize } from "./bot.js"
 import { db } from "./db/index.js"
+import { env } from "./env.js"
 import { logger, PinoCrawleeAdapter } from "./log.js"
 import { router } from "./routes.js"
 import { buildSubscriptionRequests } from "./sources/registry.js"
@@ -21,6 +22,8 @@ const crawler = new PlaywrightCrawler({
     launcher: chromium,
     launchOptions: {
       headless: true,
+      executablePath: env.CHROMIUM_EXECUTABLE_PATH,
+      args: env.CHROMIUM_LAUNCH_FLAGS,
     },
   },
   log: new Log({
@@ -55,6 +58,8 @@ const runSubscriptionsCrawl = async () => {
     {
       subscriptionCount: subscriptions.length,
       requestCount: startUrls.length,
+      executablePath: env.CHROMIUM_EXECUTABLE_PATH ?? null,
+      launchFlags: env.CHROMIUM_LAUNCH_FLAGS,
     },
     "Starting scheduled crawl run",
   )
@@ -82,5 +87,12 @@ CronJob.from({
   start: true,
 })
 
-logger.info("Crawler initialized")
+logger.info(
+  {
+    chromiumExecutablePath: env.CHROMIUM_EXECUTABLE_PATH ?? null,
+    chromiumLaunchFlags: env.CHROMIUM_LAUNCH_FLAGS,
+  },
+  "Crawler initialized",
+)
+
 initialize()

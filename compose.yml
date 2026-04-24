@@ -12,6 +12,12 @@ services:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U crawlee -d crawlee"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+      start_period: 10s
 
   bot:
     build:
@@ -19,9 +25,10 @@ services:
       dockerfile: Dockerfile
     container_name: crawlee-bot
     depends_on:
-      - postgres
+      postgres:
+        condition: service_healthy
     env_file:
-      - path: .env
+      - path: ./docker/.env
         required: true
 
 volumes:
